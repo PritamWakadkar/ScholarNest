@@ -54,24 +54,39 @@ const server = http.createServer(app);
 // FRONTEND URLS
 // ============================================================
 
-const allowedOrigins = [
+// Local development URLs
+const localOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
 ];
 
-// ============================================================
-// CORS
-// ============================================================
+// Production frontend URL
+const productionOrigin = process.env.FRONTEND_URL;
 
+// Combine allowed origins
+const allowedOrigins = [
+  ...localOrigins,
+  ...(productionOrigin ? [productionOrigin] : []),
+];
+
+// Remove duplicates
+const uniqueOrigins = [...new Set(allowedOrigins)];
+
+console.log("Allowed frontend origins:", uniqueOrigins);
+
+// ============================================================
+// CORS CONFIGURATION
+// ============================================================
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests such as Postman/server-to-server
-    // where Origin header may not exist.
+    // Allow requests without Origin header
+    // Example: Postman, server-to-server requests
     if (!origin) {
       return callback(null, true);
     }
 
-    if (allowedOrigins.includes(origin)) {
+    // Allow known origins
+    if (uniqueOrigins.includes(origin)) {
       return callback(null, true);
     }
 
@@ -83,6 +98,21 @@ const corsOptions = {
   },
 
   credentials: true,
+
+  methods: [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
+  ],
+
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+  ],
 };
 
 // ============================================================
@@ -130,9 +160,7 @@ app.use(cookieParser());
 // ============================================================
 app.use(
   "/uploads",
-  express.static(
-    path.join(__dirname, "uploads")
-  )
+  express.static(path.join(__dirname, "uploads"))
 );
 
 // ============================================================
@@ -151,61 +179,27 @@ app.get("/api/health", (req, res) => {
 // ============================================================
 
 // Authentication
-app.use(
-  "/api/auth",
-  authRoutes
-);
+app.use("/api/auth", authRoutes);
 
 // Student profile
-app.use(
-  "/api/profile",
-  profileRoutes
-);
+app.use("/api/profile", profileRoutes);
 
 // Scholarships
-app.use(
-  "/api/scholarships",
-  scholarshipRoutes
-);
+app.use("/api/scholarships", scholarshipRoutes);
 
 // Applications
-app.use(
-  "/api/applications",
-  applicationRoutes
-);
+app.use("/api/applications", applicationRoutes);
 
 // Notifications
-app.use(
-  "/api/notifications",
-  notificationRoutes
-);
+app.use("/api/notifications", notificationRoutes);
 
 // Messages
-app.use(
-  "/api/messages",
-  messageRoutes
-);
+app.use("/api/messages", messageRoutes);
 
 // ============================================================
 // ADMIN ROUTES
 // ============================================================
-
-// GET    /api/admin/dashboard
-// POST   /api/admin/scholarships
-// PUT    /api/admin/scholarships/:id
-// DELETE /api/admin/scholarships/:id
-// GET    /api/admin/students
-// GET    /api/admin/students/:id
-// GET    /api/admin/documents
-// PATCH  /api/admin/documents/:studentId/:documentId/verification
-// GET    /api/admin/applications
-// PATCH  /api/admin/applications/:id/status
-// GET    /api/admin/notifications
-
-app.use(
-  "/api/admin",
-  adminRoutes
-);
+app.use("/api/admin", adminRoutes);
 
 // ============================================================
 // 404 HANDLER
@@ -222,24 +216,16 @@ app.use(errorMiddleware);
 // ============================================================
 const PORT = process.env.PORT || 8080;
 
-server.listen(PORT, () => {
+server.listen(PORT, "0.0.0.0", () => {
+  console.log("==========================================");
+  console.log("ScholarNet backend started successfully");
+  console.log("==========================================");
+  console.log(`Port: ${PORT}`);
+  console.log(`API: /api`);
+  console.log(`Health: /api/health`);
+  console.log(`Admin API: /api/admin`);
   console.log(
-    `ScholarNet backend running on http://localhost:${PORT}`
+    `Allowed frontend origins: ${uniqueOrigins.join(", ")}`
   );
-
-  console.log(
-    `API: http://localhost:${PORT}/api`
-  );
-
-  console.log(
-    `Health: http://localhost:${PORT}/api/health`
-  );
-
-  console.log(
-    `Admin API: http://localhost:${PORT}/api/admin`
-  );
-
-  console.log(
-    `Allowed frontend origins: ${allowedOrigins.join(", ")}`
-  );
+  console.log("==========================================");
 });
